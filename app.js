@@ -45,6 +45,7 @@ const {
   // checkNotAuthenticated
 } = require("./passport-config.js")
 const { userInfo } = require('os')
+const { reset } = require('nodemon')
 intializePassport(passport);
 
 app.use(bodyParser.json());
@@ -71,34 +72,9 @@ var transporter = nodemailer.createTransport({
     pass: 'password'
   }
 });
-// app.use(
-//   session({
-//     genid: (req) => {
-//       console.log("1. in genid req.sessionID: ", req.sessionID);
-//       return uuidv4();
-//     },
-//     // where we store the session data. Normally a Database like MongoDB or PostGreSQL
-//     // session-file-store package defaults to ./sessions
-//     store: new FileStore(),
-//     // think of the secret as a "missing puzzle piece".
-//     secret: "a private key",
-//     resave: false,
-//     saveUninitialized: true,
-//   })
-// );
-
 app.use(passport.initialize())
 app.use(passport.session())
-//app.use(methodOverride('_method'))
 
-
-// app.get('/dashboard',(req,res)=>{
-//     res.render('dashboard.ejs')
-//   })
-
-// app.get('/landing',(res,req)=>{
-//   res.render('landing.ejs')
-// })
 app.post('/connect' , (req,res)=>{
   console.log("emial connect")
   console.log(req.body.email)
@@ -131,25 +107,10 @@ app.post('/register',
   //checkNotAuthenticated, 
   async (req, res) => {
     const {name,password,role,eid,email,hostel} = req.body;
-    // console.log(req.body.name);
-    // console.log(email);
-    // console.log(role);
-    // console.log(hostel);
-    // if(User.find({email})){
-    //   console.log("not a unique email id");
-    //   res.redirect('/register');
-    // }
-    // if(password.length < 8){
-    //   console.log("password is too short");
-    //   res.redirect('./register');
-    // }
-    // const errors = validateRegisterInput(req.body)
-    // console.log("back in register")
-    // console.log(Object.keys(errors).length)
-    // if(Object.keys(errors).length > 0 ) {
-    //   console.log(errors);
-    //   return res.redirect('/register')
-    // }
+    if(User.find({email})){
+      console.log("not a unique email id");
+      res.redirect('/login');
+    }
     console.log(role);
     try {
       const hashedPassword = await bcrypt.hash(password, 10)
@@ -173,16 +134,12 @@ app.post('/register',
             console.log(err)
             
           })
-          //newuser.save().then({
-            //res.redirect('/landing')})
           } catch {
             res.redirect('/failed')
           }
         })
     
-// app.get('/',(req,res)=>{
-//   res.render('landing.ejs');
-// })
+
 app.get('/login',(req,res)=>{
     res.render('login.ejs');
 })
@@ -192,21 +149,33 @@ app.get('/',(req,res)=>{
 app.post('/',(req,res)=>{
   res.redirect('/login');
 })
-// app.post('/login',passport.authenticate('local',{
-//     // failureRedirect:"/login",
-//     // successRedirect:"/register",
-//     // failureFlash: true
-//   }),async(req,res) =>{
-//     console.log(req.user);
-//     res.render("dashboard.ejs")
-// })
+app.get('/changePassword',(req,res)=>{
+  res.render('forgot_password.ejs');
+})
+app.post('/changePassword',async (req,res)=>{
+  const {email,oldPassword,newPassword} = req.body;
+  console.log(email)
+  console.log(newPassword)
 
-// app.post('/login',
-//   passport.authenticate('local'),
-//   function(req,res){
-//     res.json(req.user);
-//   }
-// )
+  try{
+    if(User.find({email}).count()>1)
+    {
+      console.log("hello")
+    }
+    result=await User.updateMany({'email':email},{'password':newPassword});
+    console.log(result)
+    res.redirect('/login');
+
+  }
+  catch(e){
+    console.log("error");
+    console.log(e);
+  }
+  
+  
+
+})
+
 
 app.post('/login',passport.authenticate
 ('local',
@@ -264,10 +233,6 @@ app.post('/dashboard',isAuthenticated,async(req,res)=>{
   const user = await User.find({email});
   const{type,slot,desc,room}=req.body;
   console.log(email);
-  // var ctype ;
-  // if( val == 1) ctype = "cleaning";
-  // if( val == 2) ctype = "plumbing";
-  // if( val == 3) ctype = ""
   try{
   const newComplaint = new Complaint({
     //type: ctype
@@ -310,11 +275,7 @@ app.get('/dashboard', isAuthenticated, async(req,res)=>{
       let value = user[key];
       array.push(value);
   });
- // console.log("------------");
- // console.log(array[0]);
   let uservalue = Object.values(array[0]);
-  //console.log(uservalue);
-  //console.log(uservalue[2]);
   console.log("++++++++++++++++++++++++++++")
   const username = uservalue[1]
   const email = uservalue[2];
@@ -344,123 +305,11 @@ app.get('/dashboard', isAuthenticated, async(req,res)=>{
     console.log(complaints_total);
     res.render('admin.ejs',{complaints:complaints , ch:complaints_handled , cp:complaints_pending , ct:complaints_total , username});
   }
-  //console.log(complaints);
-  // res.render('dashboard.ejs'
-  // ,{complaints:complaints}
-  // );
- // res.json({complaints});
-
-
-  
   
 
 }
 )
 
-// app.delete('/logout', (req, res) => {
-//   req.logOut()
-//   res.redirect('/login')
-// })
-
-// function containsAnycap(str) {
-//   return /[A-Z]/.test(str);
-// }
-// function containsAnynum(str) {
-//   return /[0-9]/.test(str);
-// }
-// function containsrate(str) {
-//   return /[0-9]/.test(str);
-// }
-
-// function validateRegisterInput (data){
-//   let errors = {}
-//   console.log("000000000000000000000000000000000000")
-//   //console.log(data.name.length)
-//   if(data.name.length< 2) {
-//     errors.name = 'Name should be between 2 and 30 characters'
-//   }
-//   if(data.password.length < 8 || data.password.length > 30) {
-//     errors.password = 'password should be between 8 and 30 characters'
-//   }
-//   if(data.eid.length < 8 || data.eid.length > 10) {
-//     errors.eid = 'eid should be between 8 and 10 characters'
-//   }
-//   if(!containsAnycap(data.password)){
-//     errors.password = 'password should contain atleast 1 capital letter'
-//   }
-//   if(!containsAnynum(data.password)){
-//     errors.password = 'password should contain atleast 1 number'
-//   }
-//   if(!containsrate(data.email) && data.email.split(/@/)[1] != 'thapar.edu' ){
-//     errors.password = 'email should be like @thapar.edu'
-//   }
-//   console.log("validated user data")
-//   console.log(errors);
-//   return errors;
-  // if(data.email.split(/@/)[1] != 'thapar.edu'){
-  //   errors.email = 'register using Thapar email id'
-  // }
-  // data.username = !isEmpty(data.username) ? data.username : ''
-  // data.password = !isEmpty(data.password) ? data.password : ''
-  // if (!validator.isLength(data.username, {
-  //         min: 2,
-  //         max: 30
-  //     })) {
-  //     errors.username = 'Username should be between 2 and 30 characters'
-  // }
-  // if (validator.isEmpty(data.username)) {
-  //     errors.username = 'Username is required'
-  // }
-  // if (validator.isEmpty(data.password)) {
-  //     errors.password = 'Password is required'
-  // }
-  // if (!validator.isLength(data.password, {
-  //         min: 6,
-  //         max: 30
-  //     })) {
-  //     errors.password = 'Password should be at least 6 characters'
-  // }
-  // return {
-  //     errors,
-  //     isValid: isEmpty(errors)
-  // }
-//}
-
-// function checkAuthenticated(req, res, next){
-//   if (req.isAuthenticated()) {
-    
-//     if (req.user[0]['role'] === 'student') {
-//       req.session.role = 'student';
-//      // req.session.email = req.user[0]['email']
-//     }
-
-//     if (req.user[0]['role'] === 'admin') {
-//       req.session.role = 'admin';
-//       req.session.email = req.user[0]['email']
-//     }
-//     return next()
-//   }
-//   req.flash('error_msg', "You're not authorized to view this resource")
-//   res.redirect('/login')
-// }
-
-
-// function checkAuthenticated(req, res, next) {
-//   if (req.isAuthenticated()) {
-//     return next()
-//   }
-
-//   res.redirect('/login')
-// }
-
-// function checkNotAuthenticated(req, res, next) {
-//   if (req.isAuthenticated()) {
-//     return res.redirect('/register')
-//   }
-//   next()
-// }
-
-//app.listen(3000)
 app.listen(port,()=>{
   console.log("server is listening on port " + port)
 })
